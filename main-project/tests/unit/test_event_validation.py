@@ -60,3 +60,40 @@ def test_caller_mutation():
     payload_bytes_after = event_input.payload_bytes
 
     assert payload_bytes_before == payload_bytes_after
+
+def test_reordering_payload_keys_generates_same_byte():
+    event_1 = {
+        "external_id": "invoice-01", 
+        "event_type": "invoice.paid",
+        "payload": {"invoice_id":123,"price":100}
+    }
+    event_1_input = parse_event(event_1)
+    event_2 = {
+        "external_id": "invoice-01", 
+        "event_type": "invoice.paid",
+        "payload": {"price":100,"invoice_id":123}
+    }
+    event_2_input = parse_event(event_2)
+
+    assert event_1_input.payload_bytes == event_2_input.payload_bytes
+
+def test_payload_at_64KB():
+    event = {
+        "external_id": "invoice-01", 
+        "event_type": "invoice.paid",
+        "payload": {"data": "a"*(64*1024-11)}
+    }
+    event_input = parse_event(event)
+
+    assert len(event_input.payload_bytes) == 64*1024
+
+def test_payload_over_64KB_is_rejected():
+    event = {
+        "external_id": "invoice-01", 
+        "event_type": "invoice.paid",
+        "payload": {"data": "a"*(64*1024-10)}
+    }
+    with pytest.raises(ValueError) as excinfo:
+        parse_event(event)
+
+    assert "payload byte length exceeds 64.00 KB" in str(excinfo.value)

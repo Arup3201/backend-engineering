@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 
+MAX_PAYLOAD_BYTES = 64 * 1024 # 64 KB
 
 @dataclass
 class EventInput:
@@ -32,6 +33,10 @@ def parse_event(data: dict) -> EventInput:
     payload = data.get("payload")
     if not isinstance(payload, dict):
         raise TypeError("payload needs to be a dictionary")
+
+    serialized_payload = json.dumps(payload, separators=(',', ':')).encode('UTF-8')
+    if len(serialized_payload) > MAX_PAYLOAD_BYTES:
+        raise ValueError(f"payload byte length exceeds {MAX_PAYLOAD_BYTES/1024:.2f} KB")
 
     return EventInput(
         external_id=external_id,
